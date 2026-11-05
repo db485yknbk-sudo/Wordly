@@ -144,5 +144,40 @@ async function startCamera() {
 }
 </script>
 
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+
+  import {
+    getAuth,
+    signInAnonymously,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCvx3XfMsXdYD6zrYEJ8CrUAgYOHvV0sb4",
+    authDomain: "wordly-24005.firebaseapp.com",
+    projectId: "wordly-24005",
+    storageBucket: "wordly-24005.firebasestorage.app",
+    messagingSenderId: "131200499614",
+    appId: "1:131200499614:web:ef570eb24ea0df61b7a08f",
+    measurementId: "G-YPJJYLN894"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  signInAnonymously(auth)
+    .then(() => console.log("Wordly connected to Firebase!"))
+    .catch(error => console.error("Firebase error:", error));
+
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      console.log("Wordly user connected:", user.uid);
+    }
+  });
+</script>
 </body>
 </html>
