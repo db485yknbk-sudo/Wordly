@@ -6,7 +6,9 @@
 <title>Wordly - Meet New People</title>
 
 <style>
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -48,9 +50,12 @@ button {
   background: #12a9e8;
   color: white;
   font-weight: bold;
+  cursor: pointer;
 }
 
-.stop { background: #e33d55; }
+.stop {
+  background: #e33d55;
+}
 
 video {
   width: 100%;
@@ -83,21 +88,24 @@ video {
 <p>Connect with new people through random video chat.</p>
 
 <select id="country">
-<option value="Morocco">🇲🇦 Morocco - FREE</option>
-<option value="France">🇫🇷 France</option>
-<option value="Spain">🇪🇸 Spain</option>
-<option value="Germany">🇩🇪 Germany</option>
-<option value="Brazil">🇧🇷 Brazil</option>
-<option value="Turkey">🇹🇷 Turkey</option>
-<option value="USA">🇺🇸 USA</option>
-<option value="Japan">🇯🇵 Japan</option>
+  <option value="Morocco">🇲🇦 Morocco - FREE</option>
+  <option value="France">🇫🇷 France</option>
+  <option value="Spain">🇪🇸 Spain</option>
+  <option value="Germany">🇩🇪 Germany</option>
+  <option value="Brazil">🇧🇷 Brazil</option>
+  <option value="Turkey">🇹🇷 Turkey</option>
+  <option value="USA">🇺🇸 USA</option>
+  <option value="Japan">🇯🇵 Japan</option>
 </select>
 
 <video id="camera" autoplay muted playsinline></video>
+
 <video id="remoteVideo" autoplay playsinline></video>
 
 <button onclick="startCamera()">Start Camera</button>
+
 <button onclick="nextUser()">Find Someone</button>
+
 <button class="stop" onclick="stopChat()">Stop</button>
 
 <div id="status">Welcome to Wordly</div>
@@ -109,6 +117,8 @@ video {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
 <script>
+
+// FIREBASE
 
 const firebaseConfig = {
   apiKey: "AIzaSyCvx3XfMsXdYD6zrYEJ8CrUAgYOHv0Vsb4",
@@ -124,6 +134,7 @@ firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 const db = firebase.firestore();
+
 const waitingUsers = db.collection("waiting_users");
 
 const camera = document.getElementById("camera");
@@ -147,18 +158,66 @@ let matchStarting = false;
 let active = false;
 let role = null;
 
-auth.signInAnonymously()
-.then(result => {
-  currentUser = result.user;
-  statusText.innerText = "Wordly is ready!";
-})
-.catch(error => {
-  console.error(error);
-  statusText.innerText = "Login error: " + error.message;
+
+// AUTHENTICATION - WAIT UNTIL READY
+
+const authReady = new Promise((resolve, reject) => {
+
+  const unsubscribe = auth.onAuthStateChanged(async (user) => {
+
+    if (user) {
+
+      currentUser = user;
+
+      statusText.innerText = "Wordly is ready!";
+
+      unsubscribe();
+
+      resolve(user);
+
+    } else {
+
+      try {
+
+        await auth.signInAnonymously();
+
+      } catch (error) {
+
+        console.error(error);
+
+        statusText.innerText =
+          "Login error: " + error.message;
+
+        unsubscribe();
+
+        reject(error);
+
+      }
+
+    }
+
+  }, (error) => {
+
+    console.error(error);
+
+    statusText.innerText =
+      "Authentication error: " + error.message;
+
+    unsubscribe();
+
+    reject(error);
+
+  });
+
 });
 
+
+// CAMERA
+
 async function startCamera() {
+
   try {
+
     if (localStream) return;
 
     localStream = await navigator.mediaDevices.getUserMedia({
@@ -167,87 +226,147 @@ async function startCamera() {
     });
 
     camera.srcObject = localStream;
+
     await camera.play();
 
     statusText.innerText = "Camera connected";
 
   } catch (error) {
+
     console.error(error);
-    statusText.innerText = "Camera error: " + error.message;
+
+    statusText.innerText =
+      "Camera error: " + error.message;
+
   }
+
 }
+
+
+// CREATE PEER CONNECTION
 
 function createPeerConnection() {
 
   peer = new RTCPeerConnection({
+
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun1.l.google.com:19302" }
     ]
+
   });
 
   localStream.getTracks().forEach(track => {
+
     peer.addTrack(track, localStream);
+
   });
 
-  // استقبال فيديو الشخص الآخر
+
+  // RECEIVE OTHER PERSON VIDEO
 
   peer.ontrack = async (event) => {
 
     console.log("REMOTE VIDEO RECEIVED");
 
     if (event.streams && event.streams[0]) {
+
       remoteVideo.srcObject = event.streams[0];
+
     } else {
-      let stream = remoteVideo.srcObject || new MediaStream();
+
+      let stream =
+        remoteVideo.srcObject || new MediaStream();
+
       stream.addTrack(event.track);
+
       remoteVideo.srcObject = stream;
+
     }
 
     try {
+
       await remoteVideo.play();
+
       statusText.innerText = "Video received! 🎉";
+
     } catch (error) {
+
       console.error(error);
-      statusText.innerText = "Video play error: " + error.message;
+
+      statusText.innerText =
+        "Video play error: " + error.message;
+
     }
+
   };
 
-  peer.onicecandidate = async event => {
+
+  // ICE CANDIDATES
+
+  peer.onicecandidate = async (event) => {
+
     if (!event.candidate || !roomRef || !role) return;
 
     const collectionName =
-      role === "offerer" ? "offerCandidates" : "answerCandidates";
+      role === "offerer"
+        ? "offerCandidates"
+        : "answerCandidates";
 
     try {
-      await roomRef.collection(collectionName)
+
+      await roomRef
+        .collection(collectionName)
         .add(event.candidate.toJSON());
+
     } catch (error) {
-      console.error("ICE write error:", error);
+
+      console.error("ICE error:", error);
+
     }
+
   };
 
+
+  // CONNECTION STATUS
+
   peer.onconnectionstatechange = () => {
+
     console.log("Connection:", peer.connectionState);
 
     if (peer.connectionState === "connected") {
-      statusText.innerText = "Connected! Waiting for video...";
+
+      statusText.innerText =
+        "Connected! Waiting for video...";
+
       active = true;
+
     }
 
     if (peer.connectionState === "failed") {
-      statusText.innerText = "Connection failed. TURN server may be needed.";
+
+      statusText.innerText =
+        "Connection failed. TURN server may be needed.";
+
     }
 
     if (peer.connectionState === "disconnected") {
-      statusText.innerText = "Connection interrupted";
+
+      statusText.innerText =
+        "Connection interrupted";
+
     }
+
   };
+
 }
+
+
+// LISTEN FOR ROOM
 
 function listenForRoom() {
 
-  roomListener = roomRef.onSnapshot(async snapshot => {
+  roomListener = roomRef.onSnapshot(async (snapshot) => {
 
     if (!snapshot.exists) return;
 
@@ -255,23 +374,35 @@ function listenForRoom() {
 
     try {
 
-      if (role === "offerer" && data.answer && !remoteDescriptionSet) {
+      if (
+        role === "offerer" &&
+        data.answer &&
+        !remoteDescriptionSet
+      ) {
 
         await peer.setRemoteDescription(
           new RTCSessionDescription(data.answer)
         );
 
         remoteDescriptionSet = true;
+
         await processPendingCandidates();
+
       }
 
-      if (role === "answerer" && data.offer && !remoteDescriptionSet) {
+
+      if (
+        role === "answerer" &&
+        data.offer &&
+        !remoteDescriptionSet
+      ) {
 
         await peer.setRemoteDescription(
           new RTCSessionDescription(data.offer)
         );
 
         remoteDescriptionSet = true;
+
         await processPendingCandidates();
 
         const answer = await peer.createAnswer();
@@ -279,96 +410,154 @@ function listenForRoom() {
         await peer.setLocalDescription(answer);
 
         await roomRef.update({
+
           answer: {
             type: answer.type,
             sdp: answer.sdp
           }
+
         });
 
         statusText.innerText = "Connecting...";
+
       }
 
     } catch (error) {
+
       console.error(error);
-      statusText.innerText = "Room error: " + error.message;
+
+      statusText.innerText =
+        "Room error: " + error.message;
+
     }
 
-  }, error => {
+  }, (error) => {
+
     console.error(error);
-    statusText.innerText = "Room listener error: " + error.message;
+
+    statusText.innerText =
+      "Room listener error: " + error.message;
+
   });
+
 }
+
+
+// LISTEN FOR CANDIDATES
 
 function listenForCandidates() {
 
   const collectionName =
-    role === "offerer" ? "answerCandidates" : "offerCandidates";
+    role === "offerer"
+      ? "answerCandidates"
+      : "offerCandidates";
 
-  candidateListener = roomRef.collection(collectionName)
-    .onSnapshot(snapshot => {
+  candidateListener = roomRef
+    .collection(collectionName)
+    .onSnapshot((snapshot) => {
 
-      snapshot.docChanges().forEach(async change => {
+      snapshot.docChanges().forEach(async (change) => {
 
         if (change.type !== "added") return;
+
         if (candidateIds.has(change.doc.id)) return;
 
         candidateIds.add(change.doc.id);
 
-        const candidate = new RTCIceCandidate(change.doc.data());
+        const candidate = new RTCIceCandidate(
+          change.doc.data()
+        );
 
         if (remoteDescriptionSet) {
+
           try {
+
             await peer.addIceCandidate(candidate);
+
           } catch (error) {
-            console.error("Candidate error:", error);
+
+            console.error(error);
+
           }
+
         } else {
+
           pendingCandidates.push(candidate);
+
         }
 
       });
 
-    }, error => {
+    }, (error) => {
+
       console.error(error);
-      statusText.innerText = "Candidate error: " + error.message;
+
+      statusText.innerText =
+        "Candidate error: " + error.message;
+
     });
+
 }
+
+
+// PROCESS PENDING CANDIDATES
 
 async function processPendingCandidates() {
 
   for (const candidate of pendingCandidates) {
+
     try {
+
       await peer.addIceCandidate(candidate);
+
     } catch (error) {
+
       console.error(error);
+
     }
+
   }
 
   pendingCandidates = [];
+
 }
+
+
+// CONNECT TO ROOM
 
 async function connectToRoom(roomId, selectedRole) {
 
   role = selectedRole;
+
   roomRef = db.collection("rooms").doc(roomId);
 
   createPeerConnection();
+
   listenForRoom();
+
   listenForCandidates();
 
   if (role === "offerer") {
 
     const offer = await peer.createOffer();
+
     await peer.setLocalDescription(offer);
 
     await roomRef.update({
+
       offer: {
         type: offer.type,
         sdp: offer.sdp
       }
+
     });
+
   }
+
 }
+
+
+// FIND SOMEONE
 
 async function nextUser() {
 
@@ -378,55 +567,89 @@ async function nextUser() {
 
   try {
 
+    // WAIT FOR FIREBASE AUTHENTICATION
+
     if (!currentUser) {
-      throw new Error("Authentication not ready");
+
+      await authReady;
+
+    }
+
+    if (!currentUser) {
+
+      throw new Error("Authentication failed");
+
     }
 
     await startCamera();
 
     if (!localStream) {
+
       throw new Error("Camera unavailable");
+
     }
 
     closeConnection();
 
-    const country = document.getElementById("country").value;
+    const country =
+      document.getElementById("country").value;
 
     active = false;
 
     statusText.innerText = "Searching for people...";
 
-    await waitingUsers.doc(currentUser.uid).set({
-      status: "waiting",
-      country: country,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    await waitingUsers
+      .doc(currentUser.uid)
+      .set({
+
+        status: "waiting",
+        country: country,
+
+        createdAt:
+          firebase.firestore.FieldValue.serverTimestamp()
+
+      });
+
 
     waitingListener = waitingUsers
       .where("status", "==", "waiting")
-      .onSnapshot(async snapshot => {
+      .onSnapshot(async (snapshot) => {
 
         if (active || roomRef || !matchStarting) return;
 
-        const otherUser = snapshot.docs.find(doc => {
-          return doc.id !== currentUser.uid &&
-                 doc.data().country === country;
+        const otherUser = snapshot.docs.find((doc) => {
+
+          return (
+            doc.id !== currentUser.uid &&
+            doc.data().country === country
+          );
+
         });
 
         if (!otherUser) return;
 
         if (waitingListener) {
+
           waitingListener();
+
           waitingListener = null;
+
         }
 
-        const ids = [currentUser.uid, otherUser.id].sort();
+        const ids = [
+          currentUser.uid,
+          otherUser.id
+        ].sort();
+
         const roomId = ids[0] + "_" + ids[1];
 
         const myRole =
-          currentUser.uid === ids[0] ? "offerer" : "answerer";
+          currentUser.uid === ids[0]
+            ? "offerer"
+            : "answerer";
 
-        statusText.innerText = "Person found! Connecting...";
+        statusText.innerText =
+          "Person found! Connecting...";
 
         try {
 
@@ -435,9 +658,13 @@ async function nextUser() {
           if (myRole === "offerer") {
 
             await roomRef.set({
+
               offererId: ids[0],
               answererId: ids[1],
-              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+
+              createdAt:
+                firebase.firestore.FieldValue.serverTimestamp()
+
             });
 
             await connectToRoom(roomId, "offerer");
@@ -451,14 +678,21 @@ async function nextUser() {
         } catch (error) {
 
           console.error(error);
-          statusText.innerText = "Connection error: " + error.message;
+
+          statusText.innerText =
+            "Connection error: " + error.message;
+
           matchStarting = false;
+
         }
 
-      }, error => {
+      }, (error) => {
 
         console.error(error);
-        statusText.innerText = "Search error: " + error.message;
+
+        statusText.innerText =
+          "Search error: " + error.message;
+
         matchStarting = false;
 
       });
@@ -466,68 +700,111 @@ async function nextUser() {
   } catch (error) {
 
     console.error(error);
-    statusText.innerText = "Could not search: " + error.message;
+
+    statusText.innerText =
+      "Could not search: " + error.message;
+
     matchStarting = false;
 
   }
+
 }
+
+
+// CLOSE CONNECTION
 
 function closeConnection() {
 
   if (waitingListener) {
+
     waitingListener();
+
     waitingListener = null;
+
   }
 
   if (roomListener) {
+
     roomListener();
+
     roomListener = null;
+
   }
 
   if (candidateListener) {
+
     candidateListener();
+
     candidateListener = null;
+
   }
 
   if (peer) {
+
     peer.close();
+
     peer = null;
+
   }
 
   remoteVideo.srcObject = null;
+
   roomRef = null;
+
   role = null;
 
   candidateIds.clear();
+
   pendingCandidates = [];
+
   remoteDescriptionSet = false;
+
 }
+
+
+// STOP CHAT
 
 async function stopChat() {
 
   active = false;
+
   matchStarting = false;
 
   closeConnection();
 
   if (localStream) {
-    localStream.getTracks().forEach(track => track.stop());
+
+    localStream.getTracks().forEach(track => {
+      track.stop();
+    });
+
     localStream = null;
+
   }
 
   camera.srcObject = null;
 
   if (currentUser) {
+
     try {
-      await waitingUsers.doc(currentUser.uid).delete();
+
+      await waitingUsers
+        .doc(currentUser.uid)
+        .delete();
+
     } catch (error) {
+
       console.error(error);
+
     }
+
   }
 
   statusText.innerText = "Chat stopped";
+
 }
 
 </script>
+
 </body>
 </html>
