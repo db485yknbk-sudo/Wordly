@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Wordly - Video Chat</title>
 
 <style>
@@ -81,111 +82,54 @@ button {
 <header>🌍 WORDLY</header>
 
 <div class="coins">
-  🪙 Coins: <span id="coins">100</span>
+🪙 Coins: <span id="coins">100</span>
 </div>
 
 <div class="container">
 
 <h2>Meet New People</h2>
+
 <p>Connect with people around the world.</p>
 
 <select id="country">
-  <option value="Morocco">🇲🇦 Morocco - FREE</option>
-  <option value="France">🇫🇷 France - 10 Coins</option>
-  <option value="Spain">🇪🇸 Spain - 10 Coins</option>
-  <option value="Germany">🇩🇪 Germany - 10 Coins</option>
-  <option value="Brazil">🇧🇷 Brazil - 10 Coins</option>
-  <option value="Turkey">🇹🇷 Turkey - 10 Coins</option>
-  <option value="USA">🇺🇸 USA - 20 Coins</option>
-  <option value="Japan">🇯🇵 Japan - 20 Coins</option>
+<option value="Morocco">🇲🇦 Morocco - FREE</option>
+<option value="France">🇫🇷 France - 10 Coins</option>
+<option value="Spain">🇪🇸 Spain - 10 Coins</option>
+<option value="Germany">🇩🇪 Germany - 10 Coins</option>
+<option value="Brazil">🇧🇷 Brazil - 10 Coins</option>
+<option value="Turkey">🇹🇷 Turkey - 10 Coins</option>
+<option value="USA">🇺🇸 USA - 20 Coins</option>
+<option value="Japan">🇯🇵 Japan - 20 Coins</option>
 </select>
 
 <video id="camera" autoplay playsinline muted></video>
+
 <video id="remoteVideo" autoplay playsinline></video>
-  <button onclick="startCamera()">🎥 Start Video Chat</button>
-<button onclick="nextUser()">⏭️ Next</button>
-<button onclick="stopCamera()">⏹️ Stop</button>
-<p id="status">Ready to connect...</p>
-<p id="status">Ready to start</p>
+
+<button onclick="startCamera()">
+🎥 Start Video Chat
+</button>
+
+<button onclick="nextUser()">
+⏭️ Next
+</button>
+
+<button onclick="stopCamera()">
+⏹️ Stop
+</button>
+
+<p id="status">Connecting to Wordly...</p>
 
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script>
-let coins = 100;
-let stream = null;
 
-async function startCamera() {
-  const status = document.getElementById("status");
-  const country = document.getElementById("country").value;
-
-  let cost = country === "Morocco" ? 0 :
-             (country === "USA" || country === "Japan" ? 20 : 10);
-
-  if (coins < cost) {
-    status.textContent = "Not enough coins!";
-    return;
-  }
-
-  try {
-    if (!stream) {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      });
-
-      document.getElementById("camera").srcObject = stream;
-    }
-
-    coins -= cost;
-    document.getElementById("coins").textContent = coins;
-    status.textContent = "Camera ready! Selected: " + country;
-
-  } catch (error) {
-    status.textContent = "Please allow camera and microphone access.";
-  }
-}
-</script>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-
-  import {
-    getAuth,
-    signInAnonymously,
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-
-  import { getFirestore } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyCvx3XfMsXdYD6zrYEJ8CrUAgYOHvV0sb4",
-    authDomain: "wordly-24005.firebaseapp.com",
-    projectId: "wordly-24005",
-    storageBucket: "wordly-24005.firebasestorage.app",
-    messagingSenderId: "131200499614",
-    appId: "1:131200499614:web:ef570eb24ea0df61b7a08f",
-    measurementId: "G-YPJJYLN894"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  signInAnonymously(auth)
-    .then(() => console.log("Wordly connected to Firebase!"))
-    .catch(error => console.error("Firebase error:", error));
-
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      console.log("Wordly user connected:", user.uid);
-    }
-  });
-</script>
 <script>
-let localStream;
+
 const firebaseConfig = {
   apiKey: "AIzaSyCvx3XfMsXdYD6zrYEJ8CrUAgYOHvV0sb4",
   authDomain: "wordly-24005.firebaseapp.com",
@@ -197,46 +141,146 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
+const auth = firebase.auth();
+
 const db = firebase.firestore();
-  const auth = firebase.auth();
+
+const waitingUsers = db.collection("waiting_users");
 
 let currentUser = null;
 
-auth.signInAnonymously()
-  .then((result) => {
-    currentUser = result.user;
-    console.log("Wordly user connected:", currentUser.uid);
-  })
-  .catch((error) => {
-    console.error("Authentication error:", error);
-  });
-const waitingUsers = db.collection("waiting_users");
+let localStream = null;
+
+let coins = 100;
+
+let authReady = new Promise((resolve, reject) => {
+
+  auth.onAuthStateChanged(user => {
+
+    if (user) {
+      currentUser = user;
+      document.getElementById("status").innerText =
+        "Wordly connected!";
+      resolve(user);
+    }
+
+  }, reject);
+
+});
+
+auth.signInAnonymously().catch(error => {
+  console.error(error);
+  document.getElementById("status").innerText =
+    "Firebase login failed!";
+});
+
 async function startCamera() {
+
+  const status = document.getElementById("status");
+
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true
+
+    await authReady;
+
+    if (!localStream) {
+
+      localStream =
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+
+      document.getElementById("camera").srcObject =
+        localStream;
+
+    }
+
+    status.innerText = "Camera ready!";
+
+  } catch (error) {
+
+    console.error(error);
+
+    status.innerText =
+      "Camera or Firebase error!";
+
+  }
+
+}
+
+async function nextUser() {
+
+  const status = document.getElementById("status");
+
+  try {
+
+    await authReady;
+
+    if (!localStream) {
+      status.innerText = "Start your camera first!";
+      return;
+    }
+
+    const country =
+      document.getElementById("country").value;
+
+    await waitingUsers.doc(currentUser.uid).set({
+
+      status: "waiting",
+
+      country: country,
+
+      createdAt:
+        firebase.firestore.FieldValue.serverTimestamp()
+
     });
 
-    document.getElementById("camera").srcObject = localStream;
-    document.getElementById("status").innerText = "Camera connected!";
+    status.innerText =
+      "Searching for people...";
+
   } catch (error) {
-    document.getElementById("status").innerText = "Camera access denied!";
+
     console.error(error);
+
+    status.innerText =
+      "Could not join waiting list!";
+
   }
+
 }
 
-function stopCamera() {
+async function stopCamera() {
+
   if (localStream) {
-    localStream.getTracks().forEach(track => track.stop());
+
+    localStream.getTracks().forEach(track => {
+      track.stop();
+    });
+
+    localStream = null;
+
   }
+
   document.getElementById("camera").srcObject = null;
-  document.getElementById("status").innerText = "Camera stopped";
+
+  try {
+
+    await authReady;
+
+    await waitingUsers.doc(currentUser.uid).delete();
+
+  } catch (error) {
+
+    console.error(error);
+
+  }
+
+  document.getElementById("status").innerText =
+    "Camera stopped.";
+
 }
 
-function nextUser() {
-  document.getElementById("status").innerText = "Searching for a new user...";
-}
 </script>
+
 </body>
 </html>
