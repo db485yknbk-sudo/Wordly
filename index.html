@@ -101,9 +101,11 @@ button {
 </select>
 
 <video id="camera" autoplay playsinline muted></video>
-
-<button onclick="startCamera()">🎥 Start Video Chat</button>
-
+<video id="remoteVideo" autoplay playsinline></video>
+  <button onclick="startCamera()">🎥 Start Video Chat</button>
+<button onclick="nextUser()">⏭️ Next</button>
+<button onclick="stopCamera()">⏹️ Stop</button>
+<p id="status">Ready to connect...</p>
 <p id="status">Ready to start</p>
 
 </div>
@@ -178,6 +180,36 @@ async function startCamera() {
       console.log("Wordly user connected:", user.uid);
     }
   });
+</script>
+<script>
+let localStream;
+
+async function startCamera() {
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true
+    });
+
+    document.getElementById("camera").srcObject = localStream;
+    document.getElementById("status").innerText = "Camera connected!";
+  } catch (error) {
+    document.getElementById("status").innerText = "Camera access denied!";
+    console.error(error);
+  }
+}
+
+function stopCamera() {
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+  }
+  document.getElementById("camera").srcObject = null;
+  document.getElementById("status").innerText = "Camera stopped";
+}
+
+function nextUser() {
+  document.getElementById("status").innerText = "Searching for a new user...";
+}
 </script>
 </body>
 </html>
