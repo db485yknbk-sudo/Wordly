@@ -3,147 +3,146 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wordly - Meet New People</title>
+<title>Wordly - Video Chat</title>
 
 <style>
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: Arial, sans-serif;
 }
 
 body {
-  background: #090d1c;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #101426;
   color: white;
-  min-height: 100vh;
+  text-align: center;
 }
 
 header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-}
-
-.logo {
-  font-size: 28px;
+  padding: 22px;
+  font-size: 30px;
   font-weight: bold;
-  color: #39d9ff;
+  color: #55e6c1;
 }
 
 .coins {
   background: #202944;
-  padding: 10px 15px;
-  border-radius: 25px;
-  color: gold;
-  font-weight: bold;
+  padding: 12px;
+  border-radius: 20px;
+  display: inline-block;
+  margin: 10px;
 }
 
-main {
-  max-width: 450px;
+.container {
+  padding: 20px;
+  max-width: 500px;
   margin: auto;
-  padding: 10px 20px 30px;
-  text-align: center;
-}
-
-h1 {
-  margin: 20px 0 10px;
-  font-size: 27px;
-}
-
-.subtitle {
-  color: #aab4ca;
-  margin-bottom: 25px;
-}
-
-.camera {
-  width: 100%;
-  height: 430px;
-  background: #171f35;
-  border-radius: 25px;
-  overflow: hidden;
-  position: relative;
-  border: 2px solid #273653;
 }
 
 video {
   width: 100%;
-  height: 100%;
+  height: 260px;
+  background: black;
+  border-radius: 18px;
   object-fit: cover;
+  margin-top: 15px;
 }
 
-.camera-text {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  transform: translateY(-50%);
-  color: #aab4ca;
-  pointer-events: none;
-}
-
-select {
+select, button {
   width: 100%;
   padding: 15px;
-  margin-top: 20px;
-  background: #202944;
-  color: white;
-  border: 1px solid #354565;
+  margin-top: 15px;
+  border: none;
   border-radius: 12px;
   font-size: 16px;
 }
 
-button {
-  width: 100%;
-  padding: 17px;
-  margin-top: 15px;
-  border: none;
-  border-radius: 15px;
-  background: linear-gradient(90deg,#00c6ff,#0072ff);
+select {
+  background: #202944;
   color: white;
-  font-size: 18px;
+}
+
+button {
+  background: #55e6c1;
+  color: #101426;
   font-weight: bold;
   cursor: pointer;
 }
 
-button:disabled {
-  opacity: .5;
-}
-
 #status {
-  margin-top: 18px;
-  color: #39d9ff;
-  min-height: 25px;
-}
-
-footer {
-  text-align: center;
-  color: #68758e;
-  padding: 25px;
-  font-size: 13px;
+  margin-top: 15px;
+  color: #55e6c1;
 }
 </style>
 </head>
 
 <body>
 
-<header>
-  <div class="logo">WORDLY</div>
-  <div class="coins">🪙 <span id="coins">100</span></div>
-</header>
+<header>🌍 WORDLY</header>
 
-<main>
-
-<h1>Meet the World 🌍</h1>
-<p class="subtitle">Discover new people through video chat</p>
-
-<div class="camera">
-  <video id="video" autoplay playsinline muted></video>
-  <div class="camera-text" id="cameraText">
-    📷 Your camera will appear here
-  </div>
+<div class="coins">
+  🪙 Coins: <span id="coins">100</span>
 </div>
 
+<div class="container">
+
+<h2>Meet New People</h2>
+<p>Connect with people around the world.</p>
+
 <select id="country">
-  <option value="Morocco">🇲
+  <option value="Morocco">🇲🇦 Morocco - FREE</option>
+  <option value="France">🇫🇷 France - 10 Coins</option>
+  <option value="Spain">🇪🇸 Spain - 10 Coins</option>
+  <option value="Germany">🇩🇪 Germany - 10 Coins</option>
+  <option value="Brazil">🇧🇷 Brazil - 10 Coins</option>
+  <option value="Turkey">🇹🇷 Turkey - 10 Coins</option>
+  <option value="USA">🇺🇸 USA - 20 Coins</option>
+  <option value="Japan">🇯🇵 Japan - 20 Coins</option>
+</select>
+
+<video id="camera" autoplay playsinline muted></video>
+
+<button onclick="startCamera()">🎥 Start Video Chat</button>
+
+<p id="status">Ready to start</p>
+
+</div>
+
+<script>
+let coins = 100;
+let stream = null;
+
+async function startCamera() {
+  const status = document.getElementById("status");
+  const country = document.getElementById("country").value;
+
+  let cost = country === "Morocco" ? 0 :
+             (country === "USA" || country === "Japan" ? 20 : 10);
+
+  if (coins < cost) {
+    status.textContent = "Not enough coins!";
+    return;
+  }
+
+  try {
+    if (!stream) {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+
+      document.getElementById("camera").srcObject = stream;
+    }
+
+    coins -= cost;
+    document.getElementById("coins").textContent = coins;
+    status.textContent = "Camera ready! Selected: " + country;
+
+  } catch (error) {
+    status.textContent = "Please allow camera and microphone access.";
+  }
+}
+</script>
+
+</body>
+</html>
