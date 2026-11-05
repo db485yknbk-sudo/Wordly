@@ -3,57 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Wordly - Video Chat</title>
+<title>Wordly Video Chat</title>
 
 <style>
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
   background: #101426;
   color: white;
+  font-family: Arial, sans-serif;
   text-align: center;
 }
 
 header {
   padding: 22px;
+  color: #55e6c1;
   font-size: 30px;
   font-weight: bold;
-  color: #55e6c1;
-}
-
-.coins {
-  background: #202944;
-  padding: 12px;
-  border-radius: 20px;
-  display: inline-block;
-  margin: 10px;
 }
 
 .container {
-  padding: 20px;
   max-width: 500px;
+  padding: 15px;
   margin: auto;
 }
 
 video {
   width: 100%;
-  height: 260px;
+  height: 230px;
   background: black;
-  border-radius: 18px;
+  border-radius: 15px;
+  margin-top: 12px;
   object-fit: cover;
-  margin-top: 15px;
 }
 
 select, button {
   width: 100%;
   padding: 15px;
-  margin-top: 15px;
-  border: none;
+  margin-top: 13px;
+  border: 0;
   border-radius: 12px;
   font-size: 16px;
 }
@@ -67,12 +56,11 @@ button {
   background: #55e6c1;
   color: #101426;
   font-weight: bold;
-  cursor: pointer;
 }
 
 #status {
-  margin-top: 15px;
   color: #55e6c1;
+  margin-top: 18px;
 }
 </style>
 </head>
@@ -81,51 +69,38 @@ button {
 
 <header>🌍 WORDLY</header>
 
-<div class="coins">
-🪙 Coins: <span id="coins">100</span>
-</div>
-
 <div class="container">
 
 <h2>Meet New People</h2>
-
 <p>Connect with people around the world.</p>
 
 <select id="country">
-<option value="Morocco">🇲🇦 Morocco - FREE</option>
-<option value="France">🇫🇷 France - 10 Coins</option>
-<option value="Spain">🇪🇸 Spain - 10 Coins</option>
-<option value="Germany">🇩🇪 Germany - 10 Coins</option>
-<option value="Brazil">🇧🇷 Brazil - 10 Coins</option>
-<option value="Turkey">🇹🇷 Turkey - 10 Coins</option>
-<option value="USA">🇺🇸 USA - 20 Coins</option>
-<option value="Japan">🇯🇵 Japan - 20 Coins</option>
+  <option value="Morocco">🇲🇦 Morocco - FREE</option>
+  <option value="France">🇫🇷 France</option>
+  <option value="Spain">🇪🇸 Spain</option>
+  <option value="Germany">🇩🇪 Germany</option>
+  <option value="Brazil">🇧🇷 Brazil</option>
+  <option value="Turkey">🇹🇷 Turkey</option>
+  <option value="USA">🇺🇸 USA</option>
+  <option value="Japan">🇯🇵 Japan</option>
 </select>
 
+<h3>Your Camera</h3>
 <video id="camera" autoplay playsinline muted></video>
 
+<h3>Stranger</h3>
 <video id="remoteVideo" autoplay playsinline></video>
 
-<button onclick="startCamera()">
-🎥 Start Video Chat
-</button>
+<button onclick="startCamera()">🎥 Start Camera</button>
+<button onclick="nextUser()">⏭️ Find Someone</button>
+<button onclick="stopChat()">⏹️ Stop</button>
 
-<button onclick="nextUser()">
-⏭️ Next
-</button>
-
-<button onclick="stopCamera()">
-⏹️ Stop
-</button>
-
-<p id="status">Connecting to Wordly...</p>
+<p id="status">Connecting...</p>
 
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
 <script>
@@ -136,151 +111,359 @@ const firebaseConfig = {
   projectId: "wordly-24005",
   storageBucket: "wordly-24005.firebasestorage.app",
   messagingSenderId: "131200499614",
-  appId: "1:131200499614:web:ef570eb24ea0df61b7a08f"
+  appId: "1:131200499614:web:ef570eb24ea0df61b7a08f",
+  measurementId: "G-YPJJYLN894"
 };
 
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
-
 const db = firebase.firestore();
 
 const waitingUsers = db.collection("waiting_users");
 
 let currentUser = null;
-
 let localStream = null;
+let peer = null;
+let roomRef = null;
+let roomListener = null;
+let candidateListener = null;
+let candidateIds = new Set();
+let pendingCandidates = [];
+let remoteDescriptionSet = false;
+let offerCreated = false;
+let answerCreated = false;
+let active = false;
+let waitingListener = null;
 
-let coins = 100;
+const statusText = document.getElementById("status");
 
-let authReady = new Promise((resolve, reject) => {
-
+const authReady = new Promise((resolve, reject) => {
   auth.onAuthStateChanged(user => {
-
     if (user) {
       currentUser = user;
-      document.getElementById("status").innerText =
-        "Wordly connected!";
+      statusText.innerText = "Wordly connected!";
       resolve(user);
     }
-
   }, reject);
-
 });
 
 auth.signInAnonymously().catch(error => {
   console.error(error);
-  document.getElementById("status").innerText =
-    "Firebase login failed!";
+  statusText.innerText = "Firebase login failed!";
 });
 
 async function startCamera() {
-
-  const status = document.getElementById("status");
-
   try {
-
     await authReady;
 
     if (!localStream) {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
 
-      localStream =
-        await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
-        });
-
-      document.getElementById("camera").srcObject =
-        localStream;
-
+      document.getElementById("camera").srcObject = localStream;
     }
 
-    status.innerText = "Camera ready!";
+    statusText.innerText = "Camera ready! Press Find Someone.";
 
   } catch (error) {
-
     console.error(error);
+    statusText.innerText = "Camera permission error!";
+  }
+}
 
-    status.innerText =
-      "Camera or Firebase error!";
+function closeConnection() {
+  if (roomListener) roomListener();
+  if (candidateListener) candidateListener();
 
+  roomListener = null;
+  candidateListener = null;
+
+  if (peer) {
+    peer.close();
+    peer = null;
   }
 
+  roomRef = null;
+  candidateIds.clear();
+  pendingCandidates = [];
+  remoteDescriptionSet = false;
+  offerCreated = false;
+  answerCreated = false;
+
+  document.getElementById("remoteVideo").srcObject = null;
+}
+
+async function addPendingCandidates() {
+  if (!peer || !remoteDescriptionSet) return;
+
+  for (const candidate of pendingCandidates) {
+    try {
+      await peer.addIceCandidate(
+        new RTCIceCandidate(candidate)
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  pendingCandidates = [];
 }
 
 async function nextUser() {
-
-  const status = document.getElementById("status");
-
   try {
-
     await authReady;
 
     if (!localStream) {
-      status.innerText = "Start your camera first!";
+      statusText.innerText = "Start your camera first!";
       return;
     }
 
-    const country =
-      document.getElementById("country").value;
+    closeConnection();
+    active = true;
+
+    const country = document.getElementById("country").value;
 
     await waitingUsers.doc(currentUser.uid).set({
-
       status: "waiting",
-
       country: country,
-
-      createdAt:
-        firebase.firestore.FieldValue.serverTimestamp()
-
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    status.innerText =
-      "Searching for people...";
+    statusText.innerText = "Searching for people...";
+
+    if (waitingListener) waitingListener();
+
+    let matchStarting = false;
+
+    waitingListener = waitingUsers
+      .where("status", "==", "waiting")
+      .onSnapshot(async snapshot => {
+
+        if (!active || matchStarting) return;
+
+        const otherUser = snapshot.docs.find(doc =>
+          doc.id !== currentUser.uid &&
+          doc.data().country === country
+        );
+
+        if (!otherUser) return;
+
+        matchStarting = true;
+
+        try {
+          const ids = [currentUser.uid, otherUser.id].sort();
+          const roomId = ids[0] + "_" + ids[1];
+
+          roomRef = db.collection("rooms").doc(roomId);
+
+          if (waitingListener) {
+            waitingListener();
+            waitingListener = null;
+          }
+
+          createPeerConnection();
+
+          if (currentUser.uid === ids[0]) {
+            await roomRef.set({
+              offererId: ids[0],
+              answererId: ids[1],
+              country: country,
+              status: "connecting",
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          }
+
+          listenForRoom();
+
+          statusText.innerText = "Found someone! Connecting...";
+
+        } catch (error) {
+          console.error(error);
+          statusText.innerText = "Connection error!";
+          matchStarting = false;
+        }
+      });
 
   } catch (error) {
-
     console.error(error);
-
-    status.innerText =
-      "Could not join waiting list!";
-
+    statusText.innerText = "Could not search!";
   }
+}
+function createPeerConnection() {
+  peer = new RTCPeerConnection({
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" }
+    ]
+  });
 
+  localStream.getTracks().forEach(track => {
+    peer.addTrack(track, localStream);
+  });
+
+  peer.ontrack = event => {
+    document.getElementById("remoteVideo").srcObject =
+      event.streams[0];
+
+    statusText.innerText = "Connected! 🎉";
+  };
+
+  peer.onicecandidate = async event => {
+    if (!event.candidate || !roomRef) return;
+
+    const room = await roomRef.get();
+
+    if (!room.exists) return;
+
+    const isOfferer =
+      currentUser.uid === room.data().offererId;
+
+    const collectionName = isOfferer
+      ? "offerCandidates"
+      : "answerCandidates";
+
+    await roomRef.collection(collectionName).add(
+      event.candidate.toJSON()
+    );
+  };
+
+  peer.onconnectionstatechange = () => {
+    if (!peer) return;
+
+    if (peer.connectionState === "connected") {
+      statusText.innerText = "Connected! 🎉";
+    } else if (peer.connectionState === "failed") {
+      statusText.innerText = "Connection failed. Try again.";
+    } else if (peer.connectionState === "disconnected") {
+      statusText.innerText = "Connection interrupted.";
+    }
+  };
 }
 
-async function stopCamera() {
+function listenForRoom() {
+  roomListener = roomRef.onSnapshot(async snapshot => {
+    if (!snapshot.exists || !peer || !active) return;
+
+    const data = snapshot.data();
+
+    const isOfferer =
+      currentUser.uid === data.offererId;
+
+    if (isOfferer) {
+      if (!offerCreated) {
+        offerCreated = true;
+
+        const offer = await peer.createOffer();
+
+        await peer.setLocalDescription(offer);
+
+        await roomRef.update({
+          offer: {
+            type: offer.type,
+            sdp: offer.sdp
+          }
+        });
+      }
+
+      if (data.answer && !remoteDescriptionSet) {
+        await peer.setRemoteDescription(
+          new RTCSessionDescription(data.answer)
+        );
+
+        remoteDescriptionSet = true;
+        await addPendingCandidates();
+      }
+
+    } else {
+      if (data.offer && !answerCreated) {
+        answerCreated = true;
+
+        await peer.setRemoteDescription(
+          new RTCSessionDescription(data.offer)
+        );
+
+        remoteDescriptionSet = true;
+        await addPendingCandidates();
+
+        const answer = await peer.createAnswer();
+
+        await peer.setLocalDescription(answer);
+
+        await roomRef.update({
+          answer: {
+            type: answer.type,
+            sdp: answer.sdp
+          }
+        });
+      }
+    }
+
+    listenForCandidates(isOfferer);
+
+  });
+}
+
+function listenForCandidates(isOfferer) {
+  if (candidateListener || !roomRef) return;
+
+  const collectionName = isOfferer
+    ? "answerCandidates"
+    : "offerCandidates";
+
+  candidateListener = roomRef
+    .collection(collectionName)
+    .onSnapshot(snapshot => {
+
+      snapshot.docChanges().forEach(async change => {
+        if (change.type !== "added") return;
+
+        if (candidateIds.has(change.doc.id)) return;
+
+        candidateIds.add(change.doc.id);
+
+        const candidate = change.doc.data();
+
+        if (remoteDescriptionSet && peer) {
+          try {
+            await peer.addIceCandidate(
+              new RTCIceCandidate(candidate)
+            );
+          } catch (error) {
+            console.error(error);
+          }
+        } else {
+          pendingCandidates.push(candidate);
+        }
+      });
+
+    });
+}
+
+async function stopChat() {
+  active = false;
+
+  closeConnection();
 
   if (localStream) {
-
-    localStream.getTracks().forEach(track => {
-      track.stop();
-    });
-
+    localStream.getTracks().forEach(track => track.stop());
     localStream = null;
-
   }
 
   document.getElementById("camera").srcObject = null;
 
   try {
-
     await authReady;
-
     await waitingUsers.doc(currentUser.uid).delete();
-
   } catch (error) {
-
     console.error(error);
-
   }
 
-  document.getElementById("status").innerText =
-    "Camera stopped.";
-
+  statusText.innerText = "Chat stopped.";
 }
 
 </script>
-
 </body>
 </html>
