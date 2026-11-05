@@ -2,81 +2,87 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wordly - Meet the World</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WORDLY - Video Chat</title>
+
 <style>
 *{box-sizing:border-box}
 body{
-margin:0;background:#090d18;color:white;
-font-family:Arial,sans-serif;text-align:center;
+margin:0;background:#080d19;color:white;
+font-family:Arial;text-align:center;
 }
 header{
-padding:22px;background:#111a2b;
-font-size:28px;font-weight:bold;color:#36d6ff;
+padding:22px;font-size:30px;
+font-weight:bold;color:#27d9ff;
+background:#111b2d;
 }
-.container{padding:25px 18px}
-h1{font-size:32px}
-p{color:#aab5c8}
-.card{
-background:#151f33;padding:25px;
-border-radius:20px;margin-top:25px;
+.container{padding:20px}
+h1{font-size:30px}
+p{color:#9baac0}
+.coins{color:#ffd34e;margin:20px}
+.video{
+width:100%;height:400px;
+background:#151e30;border-radius:20px;
+overflow:hidden;position:relative;
+}
+video{
+width:100%;height:100%;
+object-fit:cover;
 }
 select,button{
-width:100%;padding:16px;margin-top:15px;
-border:0;border-radius:12px;font-size:16px;
+width:100%;padding:16px;
+margin-top:15px;border:0;
+border-radius:12px;font-size:16px;
 }
-select{background:#26344d;color:white}
-button{
-background:#16b9e9;color:white;
-font-weight:bold;cursor:pointer;
-}
-.coins{color:#ffd34e;font-weight:bold;margin:20px}
-#status{margin-top:25px;color:#36d6ff}
-.video{
-height:230px;background:#050914;
-border-radius:15px;display:flex;
-align-items:center;justify-content:center;
-font-size:50px;margin-top:20px;
-}
-footer{margin-top:40px;color:#718096;font-size:12px}
+select{background:#202e45;color:white}
+button{background:#19bce8;color:white;font-weight:bold}
+.stop{background:#e94357}
+#status{margin:20px;color:#29d9ff}
 </style>
 </head>
+
 <body>
 
 <header>🌍 WORDLY</header>
 
 <div class="container">
-<h1>Meet the World!</h1>
-<p>Connect with random people around the world.</p>
 
-<div class="coins">🪙 Your Coins: <span id="coins">100</span></div>
+<h1>Meet The World</h1>
+<p>Connect with people around the world.</p>
 
-<div class="card">
-<h3>Choose Your Country</h3>
+<div class="coins">
+🪙 Coins: <span id="coins">100</span>
+</div>
+
+<div class="video">
+<video id="camera" autoplay playsinline muted></video>
+</div>
+
 <select id="country">
 <option value="Morocco">🇲🇦 Morocco - FREE</option>
 <option value="France">🇫🇷 France - 10 Coins</option>
-<option value="USA">🇺🇸 USA - 10 Coins</option>
 <option value="Spain">🇪🇸 Spain - 10 Coins</option>
+<option value="USA">🇺🇸 USA - 10 Coins</option>
 <option value="Turkey">🇹🇷 Turkey - 10 Coins</option>
 <option value="Brazil">🇧🇷 Brazil - 10 Coins</option>
 <option value="Japan">🇯🇵 Japan - 10 Coins</option>
 </select>
 
-<button onclick="start()">🎥 START VIDEO CHAT</button>
-<div id="status">Ready to meet someone?</div>
-<div class="video" id="video">🌍</div>
-<button onclick="stop()">❌ STOP</button>
-</div>
+<button onclick="start()">🎥 START VIDEO</button>
+<button class="stop" onclick="stop()">STOP</button>
 
-<footer>WORDLY © 2026 | Meet Without Borders</footer>
+<div id="status">Ready to connect?</div>
+
 </div>
 
 <script>
+let stream=null;
 let coins=100;
 
-function start(){
+async function start(){
+
 let country=document.getElementById("country").value;
+
 if(country!=="Morocco"){
 if(coins<10){
 document.getElementById("status").innerText="Not enough coins!";
@@ -85,14 +91,30 @@ return;
 coins-=10;
 document.getElementById("coins").innerText=coins;
 }
+
+try{
+stream=await navigator.mediaDevices.getUserMedia({
+video:true,audio:true
+});
+
+document.getElementById("camera").srcObject=stream;
+
 document.getElementById("status").innerText=
-"Searching for someone from "+country+"...";
-document.getElementById("video").innerText="🔎";
+"Camera ready! Searching for "+country+"...";
+
+}catch(e){
+document.getElementById("status").innerText=
+"Please allow camera and microphone access.";
+}
 }
 
 function stop(){
+if(stream){
+stream.getTracks().forEach(track=>track.stop());
+stream=null;
+}
+document.getElementById("camera").srcObject=null;
 document.getElementById("status").innerText="Disconnected";
-document.getElementById("video").innerText="🌍";
 }
 </script>
 
