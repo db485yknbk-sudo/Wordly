@@ -1,810 +1,442 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wordly - Meet New People</title>
-
-<style>
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #080d1b;
-  color: white;
-  text-align: center;
-}
-
-header {
-  padding: 22px;
-  background: #101a32;
-  font-size: 28px;
-  font-weight: bold;
-  color: #55d6ff;
-}
-
-.container {
-  max-width: 600px;
-  margin: auto;
-  padding: 20px;
-}
-
-select, button {
-  width: 100%;
-  padding: 15px;
-  margin-top: 12px;
-  border: none;
-  border-radius: 10px;
-  font-size: 16px;
-}
-
-select {
-  background: #17233e;
-  color: white;
-}
-
-button {
-  background: #12a9e8;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.stop {
-  background: #e33d55;
-}
-
-video {
-  width: 100%;
-  height: 230px;
-  background: #000;
-  border-radius: 15px;
-  object-fit: cover;
-  margin-top: 12px;
-}
-
-#status {
-  margin-top: 20px;
-  padding: 14px;
-  background: #17233e;
-  border-radius: 10px;
-  color: #55d6ff;
-  overflow-wrap: anywhere;
-}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07111f">
+  <title>Wordly — Random Video Chat</title>
+  <style>
+    :root{color-scheme:dark;--bg:#07111f;--panel:#101d30;--panel2:#15243a;--line:#263a56;--text:#f4f7fb;--muted:#9aabc2;--accent:#6c7cff;--good:#37d69a;--danger:#ff657a}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -10%,#1a3152 0,#07111f 48%);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+    .wrap{max-width:980px;margin:auto;padding:20px 16px 36px}
+    header{display:flex;align-items:center;justify-content:space-between;margin:4px 0 22px}
+    .brand{font-size:25px;font-weight:850;letter-spacing:-1px}.brand span{color:#8490ff}
+    .badge{font-size:12px;color:#cbd5e5;border:1px solid var(--line);background:#0c192a;padding:7px 11px;border-radius:30px}
+    h1{font-size:clamp(25px,5vw,38px);margin:0 0 8px;letter-spacing:-1px}
+    .sub{color:var(--muted);margin:0 0 20px;font-size:14px}
+    .videos{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .video-card{position:relative;overflow:hidden;min-height:220px;aspect-ratio:4/3;background:#030912;border:1px solid var(--line);border-radius:18px}
+    video{width:100%;height:100%;object-fit:cover;display:block;background:#030912}
+    .video-label{position:absolute;left:12px;top:12px;background:#07111fcc;border:1px solid #ffffff20;border-radius:20px;padding:6px 10px;font-size:12px}
+    .placeholder{position:absolute;inset:0;display:grid;place-items:center;color:#8fa0b8;text-align:center;font-size:13px;padding:18px;pointer-events:none}
+    .controls{margin-top:16px;background:#0d1a2b;border:1px solid var(--line);border-radius:18px;padding:16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    button,select{font:inherit;border-radius:12px;border:1px solid var(--line);padding:12px 15px;color:var(--text);background:var(--panel2)}
+    button{cursor:pointer;font-weight:700;flex:1;min-width:130px}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .primary{background:linear-gradient(135deg,#6978ff,#8a62e8);border:0}
+    .stop{background:#321b2a;border-color:#653044;color:#ffb8c2}
+    .country-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;color:var(--muted);font-size:13px}
+    select{flex:1;min-width:0}
+    #status{margin:14px 2px 2px;color:#d9e3f2;font-size:14px;min-height:22px}
+    #detail{color:var(--muted);font-size:12px;margin:7px 2px 0;line-height:1.5}
+    .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#f5bd4f;margin-right:7px}
+    .note{margin-top:16px;color:#8294ad;font-size:12px;line-height:1.55}
+    @media(max-width:600px){.wrap{padding:15px 12px 28px}.videos{gap:9px}.video-card{min-height:150px;border-radius:14px}.controls{padding:12px}.row{gap:8px}button{min-width:calc(50% - 8px);padding:12px 8px;font-size:13px}}
+  </style>
 </head>
-
 <body>
+  <main class="wrap">
+    <header>
+      <div class="brand">word<span>ly</span></div>
+      <div class="badge">BETA · VIDEO CHAT</div>
+    </header>
+    <h1>Meet someone new.</h1>
+    <p class="sub">Random video conversations, one connection at a time.</p>
 
-<header>WORDLY 🌍</header>
+    <section class="videos">
+      <div class="video-card">
+        <video id="localVideo" autoplay muted playsinline></video>
+        <div class="video-label">You</div>
+        <div class="placeholder" id="localPlaceholder">Your camera preview appears here</div>
+      </div>
+      <div class="video-card">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div class="video-label">Stranger</div>
+        <div class="placeholder" id="remotePlaceholder">Waiting for someone…</div>
+      </div>
+    </section>
 
-<div class="container">
+    <section class="controls">
+      <div class="country-row">
+        <label for="country">Country</label>
+        <select id="country">
+          <option value="any">🌍 Any country</option>
+          <option value="MA">🇲🇦 Morocco</option>
+          <option value="FR">🇫🇷 France</option>
+          <option value="ES">🇪🇸 Spain</option>
+          <option value="US">🇺🇸 United States</option>
+          <option value="GB">🇬🇧 United Kingdom</option>
+          <option value="TR">🇹🇷 Türkiye</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="cameraBtn">Start Camera</button>
+        <button id="startBtn" class="primary">Find someone</button>
+        <button id="nextBtn" disabled>Next</button>
+        <button id="stopBtn" class="stop" disabled>Stop</button>
+      </div>
+      <div id="status"><span class="dot"></span>Ready. Start your camera first.</div>
+      <div id="detail">Allow camera and microphone access when your browser asks.</div>
+    </section>
+    <p class="note">Wordly is in testing. Be respectful, never share private information, and stop the chat if you feel uncomfortable. Country selection is currently a display option; matching is not yet filtered by country.</p>
+  </main>
 
-<h2>Meet People Around The World</h2>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import {
+      getFirestore, collection, doc, addDoc, getDocs, query, where, limit,
+      runTransaction, updateDoc, onSnapshot, serverTimestamp, deleteDoc
+    } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
-<p>Connect with new people through random video chat.</p>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCvx3XfMsXdYD6zrYEJ8CrUAgYOHvV0sb4",
+      authDomain: "wordly-24005.firebaseapp.com",
+      projectId: "wordly-24005",
+      storageBucket: "wordly-24005.firebasestorage.app",
+      messagingSenderId: "131200499614",
+      appId: "1:131200499614:web:ef570eb24ea0df61b7a08f",
+      measurementId: "G-YPJJYLN894"
+    };
 
-<select id="country">
-  <option value="Morocco">🇲🇦 Morocco - FREE</option>
-  <option value="France">🇫🇷 France</option>
-  <option value="Spain">🇪🇸 Spain</option>
-  <option value="Germany">🇩🇪 Germany</option>
-  <option value="Brazil">🇧🇷 Brazil</option>
-  <option value="Turkey">🇹🇷 Turkey</option>
-  <option value="USA">🇺🇸 USA</option>
-  <option value="Japan">🇯🇵 Japan</option>
-</select>
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-<video id="camera" autoplay muted playsinline></video>
+    const $ = (id) => document.getElementById(id);
+    const localVideo = $("localVideo");
+    const remoteVideo = $("remoteVideo");
+    const localPlaceholder = $("localPlaceholder");
+    const remotePlaceholder = $("remotePlaceholder");
+    const statusEl = $("status");
+    const detailEl = $("detail");
+    const cameraBtn = $("cameraBtn");
+    const startBtn = $("startBtn");
+    const nextBtn = $("nextBtn");
+    const stopBtn = $("stopBtn");
 
-<video id="remoteVideo" autoplay playsinline></video>
+    let user = null;
+    let localStream = null;
+    let peer = null;
+    let roomRef = null;
+    let role = null;
+    let roomUnsubscribe = null;
+    let candidateUnsubscribes = [];
+    let seenCandidates = new Set();
+    let busy = false;
+    let ended = false;
+    let remoteDescriptionSet = false;
 
-<button onclick="startCamera()">Start Camera</button>
+    function status(message, detail = "") {
+      statusEl.textContent = message;
+      detailEl.textContent = detail;
+    }
+    function setButtons() {
+      cameraBtn.disabled = !!localStream;
+      startBtn.disabled = busy || !localStream;
+      nextBtn.disabled = !localStream || (!busy && !roomRef);
+      stopBtn.disabled = !localStream && !busy && !roomRef;
+    }
+    function clearRemote() {
+      remoteVideo.srcObject = null;
+      remotePlaceholder.style.display = "grid";
+    }
+    function cleanupPeer() {
+      candidateUnsubscribes.forEach(fn => fn && fn());
+      candidateUnsubscribes = [];
+      if (roomUnsubscribe) roomUnsubscribe();
+      roomUnsubscribe = null;
+      if (peer) {
+        peer.ontrack = null;
+        peer.onicecandidate = null;
+        peer.onconnectionstatechange = null;
+        peer.oniceconnectionstatechange = null;
+        peer.close();
+      }
+      peer = null;
+      clearRemote();
+      seenCandidates = new Set();
+      remoteDescriptionSet = false;
+    }
+    async function closeRoom() {
+      const oldRoom = roomRef;
+      roomRef = null;
+      if (oldRoom) {
+        try { await updateDoc(oldRoom, { status: "closed", closedAt: serverTimestamp() }); }
+        catch (e) { console.warn("Could not close room", e); }
+      }
+    }
+    async function stopMatching() {
+      ended = true;
+      busy = false;
+      cleanupPeer();
+      await closeRoom();
+      role = null;
+      status("Stopped. You can search again.");
+      setButtons();
+    }
 
-<button onclick="nextUser()">Find Someone</button>
+    async function ensureLogin() {
+      if (auth.currentUser) { user = auth.currentUser; return user; }
+      const credential = await signInAnonymously(auth);
+      user = credential.user;
+      return user;
+    }
 
-<button class="stop" onclick="stopChat()">Stop</button>
-
-<div id="status">Welcome to Wordly</div>
-
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-
-<script>
-
-// FIREBASE
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCvx3XfMsXdYD6zrYEJ8CrUAgYOHvV0sb4",
-  authDomain: "wordly-24005.firebaseapp.com",
-  projectId: "wordly-24005",
-  storageBucket: "wordly-24005.firebasestorage.app",
-  messagingSenderId: "131200499614",
-  appId: "1:131200499614:web:ef570eb24ea0df61b7a08f",
-  measurementId: "G-YPJJYLN894"
-};
-
-firebase.initializeApp(firebaseConfig);
-
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-const waitingUsers = db.collection("waiting_users");
-
-const camera = document.getElementById("camera");
-const remoteVideo = document.getElementById("remoteVideo");
-const statusText = document.getElementById("status");
-
-let currentUser = null;
-let localStream = null;
-let peer = null;
-let roomRef = null;
-
-let waitingListener = null;
-let roomListener = null;
-let candidateListener = null;
-
-let candidateIds = new Set();
-let pendingCandidates = [];
-
-let remoteDescriptionSet = false;
-let matchStarting = false;
-let active = false;
-let role = null;
-
-
-// AUTHENTICATION - WAIT UNTIL READY
-
-const authReady = new Promise((resolve, reject) => {
-
-  const unsubscribe = auth.onAuthStateChanged(async (user) => {
-
-    if (user) {
-
-      currentUser = user;
-
-      statusText.innerText = "Wordly is ready!";
-
-      unsubscribe();
-
-      resolve(user);
-
-    } else {
-
+    async function startCamera() {
       try {
-
-        await auth.signInAnonymously();
-
+        if (localStream) return;
+        status("Requesting camera and microphone…");
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: { echoCancellation: true, noiseSuppression: true }
+        });
+        localVideo.srcObject = localStream;
+        await localVideo.play();
+        localPlaceholder.style.display = "none";
+        status("Camera is ready.", "Press Find someone to start matching.");
+        setButtons();
       } catch (error) {
-
         console.error(error);
-
-        statusText.innerText =
-          "Login error: " + error.message;
-
-        unsubscribe();
-
-        reject(error);
-
+        status("Could not start camera.", error.name + ": " + error.message + " — check browser permissions and use the HTTPS GitHub Pages address.");
       }
-
     }
 
-  }, (error) => {
-
-    console.error(error);
-
-    statusText.innerText =
-      "Authentication error: " + error.message;
-
-    unsubscribe();
-
-    reject(error);
-
-  });
-
-});
-
-
-// CAMERA
-
-async function startCamera() {
-
-  try {
-
-    if (localStream) return;
-
-    localStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true
-    });
-
-    camera.srcObject = localStream;
-
-    await camera.play();
-
-    statusText.innerText = "Camera connected";
-
-  } catch (error) {
-
-    console.error(error);
-
-    statusText.innerText =
-      "Camera error: " + error.message;
-
-  }
-
-}
-
-
-// CREATE PEER CONNECTION
-
-function createPeerConnection() {
-
-  peer = new RTCPeerConnection({
-
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" }
-    ]
-
-  });
-
-  localStream.getTracks().forEach(track => {
-
-    peer.addTrack(track, localStream);
-
-  });
-
-
-  // RECEIVE OTHER PERSON VIDEO
-
-  peer.ontrack = async (event) => {
-
-    console.log("REMOTE VIDEO RECEIVED");
-
-    if (event.streams && event.streams[0]) {
-
-      remoteVideo.srcObject = event.streams[0];
-
-    } else {
-
-      let stream =
-        remoteVideo.srcObject || new MediaStream();
-
-      stream.addTrack(event.track);
-
-      remoteVideo.srcObject = stream;
-
-    }
-
-    try {
-
-      await remoteVideo.play();
-
-      statusText.innerText = "Video received! 🎉";
-
-    } catch (error) {
-
-      console.error(error);
-
-      statusText.innerText =
-        "Video play error: " + error.message;
-
-    }
-
-  };
-
-
-  // ICE CANDIDATES
-
-  peer.onicecandidate = async (event) => {
-
-    if (!event.candidate || !roomRef || !role) return;
-
-    const collectionName =
-      role === "offerer"
-        ? "offerCandidates"
-        : "answerCandidates";
-
-    try {
-
-      await roomRef
-        .collection(collectionName)
-        .add(event.candidate.toJSON());
-
-    } catch (error) {
-
-      console.error("ICE error:", error);
-
-    }
-
-  };
-
-
-  // CONNECTION STATUS
-
-  peer.onconnectionstatechange = () => {
-
-    console.log("Connection:", peer.connectionState);
-
-    if (peer.connectionState === "connected") {
-
-      statusText.innerText =
-        "Connected! Waiting for video...";
-
-      active = true;
-
-    }
-
-    if (peer.connectionState === "failed") {
-
-      statusText.innerText =
-        "Connection failed. TURN server may be needed.";
-
-    }
-
-    if (peer.connectionState === "disconnected") {
-
-      statusText.innerText =
-        "Connection interrupted";
-
-    }
-
-  };
-
-}
-
-
-// LISTEN FOR ROOM
-
-function listenForRoom() {
-
-  roomListener = roomRef.onSnapshot(async (snapshot) => {
-
-    if (!snapshot.exists) return;
-
-    const data = snapshot.data();
-
-    try {
-
-      if (
-        role === "offerer" &&
-        data.answer &&
-        !remoteDescriptionSet
-      ) {
-
-        await peer.setRemoteDescription(
-          new RTCSessionDescription(data.answer)
-        );
-
-        remoteDescriptionSet = true;
-
-        await processPendingCandidates();
-
-      }
-
-
-      if (
-        role === "answerer" &&
-        data.offer &&
-        !remoteDescriptionSet
-      ) {
-
-        await peer.setRemoteDescription(
-          new RTCSessionDescription(data.offer)
-        );
-
-        remoteDescriptionSet = true;
-
-        await processPendingCandidates();
-
-        const answer = await peer.createAnswer();
-
-        await peer.setLocalDescription(answer);
-
-        await roomRef.update({
-
-          answer: {
-            type: answer.type,
-            sdp: answer.sdp
-          }
-
-        });
-
-        statusText.innerText = "Connecting...";
-
-      }
-
-    } catch (error) {
-
-      console.error(error);
-
-      statusText.innerText =
-        "Room error: " + error.message;
-
-    }
-
-  }, (error) => {
-
-    console.error(error);
-
-    statusText.innerText =
-      "Room listener error: " + error.message;
-
-  });
-
-}
-
-
-// LISTEN FOR CANDIDATES
-
-function listenForCandidates() {
-
-  const collectionName =
-    role === "offerer"
-      ? "answerCandidates"
-      : "offerCandidates";
-
-  candidateListener = roomRef
-    .collection(collectionName)
-    .onSnapshot((snapshot) => {
-
-      snapshot.docChanges().forEach(async (change) => {
-
-        if (change.type !== "added") return;
-
-        if (candidateIds.has(change.doc.id)) return;
-
-        candidateIds.add(change.doc.id);
-
-        const candidate = new RTCIceCandidate(
-          change.doc.data()
-        );
-
-        if (remoteDescriptionSet) {
-
-          try {
-
-            await peer.addIceCandidate(candidate);
-
-          } catch (error) {
-
-            console.error(error);
-
-          }
-
-        } else {
-
-          pendingCandidates.push(candidate);
-
-        }
-
+    function makePeer() {
+      cleanupPeer();
+      peer = new RTCPeerConnection({
+        iceServers: [
+          { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }
+        ]
       });
-
-    }, (error) => {
-
-      console.error(error);
-
-      statusText.innerText =
-        "Candidate error: " + error.message;
-
-    });
-
-}
-
-
-// PROCESS PENDING CANDIDATES
-
-async function processPendingCandidates() {
-
-  for (const candidate of pendingCandidates) {
-
-    try {
-
-      await peer.addIceCandidate(candidate);
-
-    } catch (error) {
-
-      console.error(error);
-
-    }
-
-  }
-
-  pendingCandidates = [];
-
-}
-
-
-// CONNECT TO ROOM
-
-async function connectToRoom(roomId, selectedRole) {
-
-  role = selectedRole;
-
-  roomRef = db.collection("rooms").doc(roomId);
-
-  createPeerConnection();
-
-  listenForRoom();
-
-  listenForCandidates();
-
-  if (role === "offerer") {
-
-    const offer = await peer.createOffer();
-
-    await peer.setLocalDescription(offer);
-
-    await roomRef.update({
-
-      offer: {
-        type: offer.type,
-        sdp: offer.sdp
-      }
-
-    });
-
-  }
-
-}
-
-
-// FIND SOMEONE
-
-async function nextUser() {
-
-  if (matchStarting) return;
-
-  matchStarting = true;
-
-  try {
-
-    // WAIT FOR FIREBASE AUTHENTICATION
-
-    if (!currentUser) {
-
-      await authReady;
-
-    }
-
-    if (!currentUser) {
-
-      throw new Error("Authentication failed");
-
-    }
-
-    await startCamera();
-
-    if (!localStream) {
-
-      throw new Error("Camera unavailable");
-
-    }
-
-    closeConnection();
-
-    const country =
-      document.getElementById("country").value;
-
-    active = false;
-
-    statusText.innerText = "Searching for people...";
-
-    await waitingUsers
-      .doc(currentUser.uid)
-      .set({
-
-        status: "waiting",
-        country: country,
-
-        createdAt:
-          firebase.firestore.FieldValue.serverTimestamp()
-
-      });
-
-
-    waitingListener = waitingUsers
-      .where("status", "==", "waiting")
-      .onSnapshot(async (snapshot) => {
-
-        if (active || roomRef || !matchStarting) return;
-
-        const otherUser = snapshot.docs.find((doc) => {
-
-          return (
-            doc.id !== currentUser.uid &&
-            doc.data().country === country
-          );
-
-        });
-
-        if (!otherUser) return;
-
-        if (waitingListener) {
-
-          waitingListener();
-
-          waitingListener = null;
-
-        }
-
-        const ids = [
-          currentUser.uid,
-          otherUser.id
-        ].sort();
-
-        const roomId = ids[0] + "_" + ids[1];
-
-        const myRole =
-          currentUser.uid === ids[0]
-            ? "offerer"
-            : "answerer";
-
-        statusText.innerText =
-          "Person found! Connecting...";
-
+      localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
+      peer.ontrack = async (event) => {
+        console.log("REMOTE VIDEO RECEIVED", event);
+        const stream = event.streams && event.streams[0]
+          ? event.streams[0]
+          : new MediaStream([event.track]);
+        remoteVideo.srcObject = stream;
+        remotePlaceholder.style.display = "none";
         try {
-
-          roomRef = db.collection("rooms").doc(roomId);
-
-          if (myRole === "offerer") {
-
-            await roomRef.set({
-
-              offererId: ids[0],
-              answererId: ids[1],
-
-              createdAt:
-                firebase.firestore.FieldValue.serverTimestamp()
-
-            });
-
-            await connectToRoom(roomId, "offerer");
-
-          } else {
-
-            await connectToRoom(roomId, "answerer");
-
-          }
-
+          await remoteVideo.play();
+          status("Connected! 🎉", "You are now chatting. Press Next to meet someone else.");
         } catch (error) {
-
-          console.error(error);
-
-          statusText.innerText =
-            "Connection error: " + error.message;
-
-          matchStarting = false;
-
+          console.error("Remote playback error", error);
+          status("Video received, but playback was blocked.", "Tap the stranger video to start playback. " + error.message);
         }
-
-      }, (error) => {
-
-        console.error(error);
-
-        statusText.innerText =
-          "Search error: " + error.message;
-
-        matchStarting = false;
-
-      });
-
-  } catch (error) {
-
-    console.error(error);
-
-    statusText.innerText =
-      "Could not search: " + error.message;
-
-    matchStarting = false;
-
-  }
-
-}
-
-
-// CLOSE CONNECTION
-
-function closeConnection() {
-
-  if (waitingListener) {
-
-    waitingListener();
-
-    waitingListener = null;
-
-  }
-
-  if (roomListener) {
-
-    roomListener();
-
-    roomListener = null;
-
-  }
-
-  if (candidateListener) {
-
-    candidateListener();
-
-    candidateListener = null;
-
-  }
-
-  if (peer) {
-
-    peer.close();
-
-    peer = null;
-
-  }
-
-  remoteVideo.srcObject = null;
-
-  roomRef = null;
-
-  role = null;
-
-  candidateIds.clear();
-
-  pendingCandidates = [];
-
-  remoteDescriptionSet = false;
-
-}
-
-
-// STOP CHAT
-
-async function stopChat() {
-
-  active = false;
-
-  matchStarting = false;
-
-  closeConnection();
-
-  if (localStream) {
-
-    localStream.getTracks().forEach(track => {
-      track.stop();
-    });
-
-    localStream = null;
-
-  }
-
-  camera.srcObject = null;
-
-  if (currentUser) {
-
-    try {
-
-      await waitingUsers
-        .doc(currentUser.uid)
-        .delete();
-
-    } catch (error) {
-
-      console.error(error);
-
+      };
+      peer.onicecandidate = async (event) => {
+        if (!event.candidate || !roomRef || !role) return;
+        const sub = role === "caller" ? "offerCandidates" : "answerCandidates";
+        try {
+          await addDoc(collection(roomRef, sub), event.candidate.toJSON());
+        } catch (error) {
+          console.error("ICE candidate write failed", error);
+          status("Signaling error while sending network candidate.", error.message);
+        }
+      };
+      peer.onconnectionstatechange = () => {
+        console.log("Peer connection:", peer.connectionState);
+        if (!peer) return;
+        if (peer.connectionState === "connected") {
+          status("Connected! 🎉", "Audio and video connection established.");
+        } else if (peer.connectionState === "failed") {
+          status("Connection failed.", "This network may require a TURN relay server. Try both phones on a different network.");
+        } else if (peer.connectionState === "disconnected") {
+          status("Connection interrupted…", "Waiting briefly for the network to recover.");
+        }
+      };
+      peer.oniceconnectionstatechange = () => {
+        console.log("ICE state:", peer.iceConnectionState);
+        if (!peer) return;
+        if (peer.iceConnectionState === "checking") status("Connecting…", "Checking the network path between both phones.");
+        if (peer.iceConnectionState === "failed") status("Network connection failed.", "STUN alone may not work on every mobile network; a TURN server may be needed.");
+      };
+      return peer;
     }
 
-  }
+    async function listenForCandidates(room, subcollection, targetPeer) {
+      const unsub = onSnapshot(collection(room, subcollection), snapshot => {
+        snapshot.docChanges().forEach(async change => {
+          if (change.type !== "added" || seenCandidates.has(change.doc.id)) return;
+          seenCandidates.add(change.doc.id);
+          if (!targetPeer || !targetPeer.remoteDescription) return;
+          try {
+            await targetPeer.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+          } catch (error) {
+            console.warn("Could not add ICE candidate", error);
+          }
+        });
+      }, error => {
+        console.error("Candidate listener error", error);
+        status("Could not read connection candidates.", error.message);
+      });
+      candidateUnsubscribes.push(unsub);
+    }
 
-  statusText.innerText = "Chat stopped";
+    async function applyExistingCandidates(room, subcollection, targetPeer) {
+      const snap = await getDocs(collection(room, subcollection));
+      for (const candidateDoc of snap.docs) {
+        if (seenCandidates.has(candidateDoc.id)) continue;
+        seenCandidates.add(candidateDoc.id);
+        try { await targetPeer.addIceCandidate(new RTCIceCandidate(candidateDoc.data())); }
+        catch (error) { console.warn("Candidate not ready yet", error); }
+      }
+    }
 
-}
+    async function findSomeone() {
+      if (busy) return;
+      if (!localStream) { status("Start your camera first."); return; }
+      busy = true;
+      ended = false;
+      setButtons();
+      cleanupPeer();
+      await closeRoom();
+      try {
+        await ensureLogin();
+        status("Looking for someone…", "Searching for an available Wordly user.");
+        const waitingQuery = query(
+          collection(db, "rooms"),
+          where("status", "==", "waiting"),
+          limit(12)
+        );
+        const waitingRooms = await getDocs(waitingQuery);
+        let joined = false;
 
-</script>
+        for (const candidateDoc of waitingRooms.docs) {
+          if (candidateDoc.data().callerUid === user.uid) continue;
+          const candidateRef = doc(db, "rooms", candidateDoc.id);
+          let offerData = null;
+          try {
+            await runTransaction(db, async transaction => {
+              const fresh = await transaction.get(candidateRef);
+              const data = fresh.data();
+              if (!fresh.exists() || !data || data.status !== "waiting" ||
+                  !data.offer || !data.expiresAt || data.expiresAt < Date.now()) {
+                throw new Error("ROOM_NOT_AVAILABLE");
+              }
+              offerData = data.offer;
+              transaction.update(candidateRef, {
+                status: "matched",
+                calleeUid: user.uid,
+                matchedAt: serverTimestamp()
+              });
+            });
+          } catch (error) {
+            if (error.message === "ROOM_NOT_AVAILABLE") continue;
+            throw error;
+          }
 
+          roomRef = candidateRef;
+          role = "callee";
+          const pc = makePeer();
+          await pc.setRemoteDescription(new RTCSessionDescription(offerData));
+          remoteDescriptionSet = true;
+          await applyExistingCandidates(roomRef, "offerCandidates", pc);
+          await listenForCandidates(roomRef, "offerCandidates", pc);
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await updateDoc(roomRef, {
+            answer: { type: answer.type, sdp: answer.sdp },
+            status: "answered"
+          });
+          await listenForCandidates(roomRef, "answerCandidates", pc);
+          joined = true;
+          status("Person found! Connecting…", "You joined a waiting room. Establishing video connection.");
+          watchRoomAsCallee(roomRef);
+          break;
+        }
+
+        if (!joined) await createWaitingRoom();
+      } catch (error) {
+        console.error(error);
+        status("Could not start matching.", error.message || String(error));
+        busy = false;
+      }
+      setButtons();
+    }
+
+    async function createWaitingRoom() {
+      role = "caller";
+      const newRoom = await addDoc(collection(db, "rooms"), {
+        status: "waiting",
+        callerUid: user.uid,
+        createdAt: serverTimestamp(),
+        expiresAt: Date.now() + 90000
+      });
+      roomRef = newRoom;
+      const pc = makePeer();
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await updateDoc(roomRef, {
+        offer: { type: offer.type, sdp: offer.sdp }
+      });
+      await listenForCandidates(roomRef, "answerCandidates", pc);
+      roomUnsubscribe = onSnapshot(roomRef, async snapshot => {
+        if (!snapshot.exists() || ended || !peer) return;
+        const data = snapshot.data();
+        if (data.answer && !peer.currentRemoteDescription) {
+          try {
+            await peer.setRemoteDescription(new RTCSessionDescription(data.answer));
+            remoteDescriptionSet = true;
+            await applyExistingCandidates(roomRef, "answerCandidates", peer);
+            status("Person found! Connecting…", "The other person answered. Establishing video connection.");
+          } catch (error) {
+            console.error("Could not apply answer", error);
+            status("Could not complete connection.", error.message);
+          }
+        }
+        if (data.status === "closed" && !ended) {
+          status("The other person left.", "Press Find someone to search again.");
+          cleanupPeer();
+          roomRef = null;
+          busy = false;
+          setButtons();
+        }
+      }, error => {
+        console.error("Room listener error", error);
+        status("Room connection error.", error.message);
+      });
+      status("Searching for a person…", "Your room is ready. Keep this page open while matching.");
+    }
+
+    function watchRoomAsCallee(room) {
+      roomUnsubscribe = onSnapshot(room, snapshot => {
+        if (!snapshot.exists() || ended) return;
+        const data = snapshot.data();
+        if (data.status === "closed") {
+          status("The other person left.", "Press Find someone to search again.");
+          cleanupPeer();
+          roomRef = null;
+          busy = false;
+          setButtons();
+        }
+      }, error => console.error("Room listener error", error));
+    }
+
+    cameraBtn.addEventListener("click", startCamera);
+    startBtn.addEventListener("click", findSomeone);
+    nextBtn.addEventListener("click", async () => {
+      await stopMatching();
+      if (localStream) await findSomeone();
+    });
+    stopBtn.addEventListener("click", stopMatching);
+    remoteVideo.addEventListener("click", () => remoteVideo.play().catch(console.warn));
+
+    // Sign in early so Firestore is ready when the user presses Find.
+    ensureLogin().then(() => status("Ready. Start your camera first."))
+      .catch(error => {
+        console.error(error);
+        status("Firebase sign-in failed.", error.message);
+      });
+    setButtons();
+
+    window.addEventListener("beforeunload", () => {
+      if (localStream) localStream.getTracks().forEach(track => track.stop());
+      cleanupPeer();
+    });
+  </script>
 </body>
 </html>
